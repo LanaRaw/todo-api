@@ -29,6 +29,7 @@
 ### Установка и запуск
 
 1. **Создайте базу данных PostgreSQL**
+   
    ```sql
    CREATE DATABASE todo_db;
 
@@ -37,17 +38,18 @@
 - Укажите свой пароль от PostgreSQL
 
 3. **Запустите приложение**
-    ```bash
+
+   ```bash
    # Через Maven Wrapper
     ./mvnw spring-boot:run
 
     # Или через Maven
     mvn spring-boot:run
    
-4. **Откройте в браузере**
-    ```text
-   http://localhost:8080
+5. **Откройте в браузере**
 
+   ```text
+   http://localhost:8080
 ### Пример работы через терминал (curl)
     ```bash
     # Создать задачу
