@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List - Task Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .add-task {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .add-task form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .add-task input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .add-task input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-task button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .add-task button:hover {
+            background: #5a67d8;
+        }
+
+        .task-list {
+            padding: 30px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+
+        .task-item:hover {
+            transform: translateX(5px);
+        }
+
+        .task-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .task-checkbox {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        .task-text {
+            flex: 1;
+        }
+
+        .task-title {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .task-title.completed {
+            text-decoration: line-through;
+            color: #adb5bd;
+        }
+
+        .task-description {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .task-description.completed {
+            text-decoration: line-through;
+            color: #adb5bd;
+        }
+
+        .delete-btn {
+            padding: 8px 16px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+            font-size: 18px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📝 Task Manager</h1>
+        <p>Manage your tasks easily</p>
+    </div>
+
+    <div class="add-task">
+        <form id="taskForm">
+            <input type="text" id="title" placeholder="Task title..." required>
+            <input type="text" id="description" placeholder="Description (optional)">
+            <button type="submit">+ Add Task</button>
+        </form>
+    </div>
+
+    <div class="task-list" id="taskList">
+        <div class="loading">Loading tasks...</div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:8080/api/tasks';
+
+    // Load tasks when page opens
+    document.addEventListener('DOMContentLoaded', loadTasks);
+
+    // Handle form submission
+    document.getElementById('taskForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+
+        if (!title.trim()) return;
+
+        await createTask(title, description);
+
+        // Clear form
+        document.getElementById('title').value = '';
+        document.getElementById('description').value = '';
+
+        // Reload tasks
+        await loadTasks();
+    });
+
+    // Load all tasks from API
+    async function loadTasks() {
+        try {
+            const response = await fetch(API_URL);
+            const tasks = await response.json();
+            displayTasks(tasks);
+        } catch (error) {
+            document.getElementById('taskList').innerHTML = '<div class="error">❌ Failed to load tasks. Make sure the server is running.</div>';
+        }
+    }
+
+    // Create new task
+    async function createTask(title, description) {
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    description: description,
+                    completed: false
+                })
+            });
+        } catch (error) {
+            console.error('Error creating task:', error);
+        }
+    }
+
+    // Update task (toggle completed status)
+    async function updateTask(id, completed, title, description) {
+        try {
+            await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    description: description,
+                    completed: completed
+                })
+            });
+            await loadTasks();
+        } catch (error) {
+            console.error('Error updating task:', error);
+        }
+    }
+
+    // Delete task
+    async function deleteTask(id) {
+        if (!confirm('Are you sure you want to delete this task?')) return;
+
+        try {
+            await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE'
+            });
+            await loadTasks();
+        } catch (error) {
+            console.error('Error deleting task:', error);
+        }
+    }
+
+    // Display tasks on page
+    function displayTasks(tasks) {
+        const taskListElement = document.getElementById('taskList');
+
+        if (!tasks || tasks.length === 0) {
+            taskListElement.innerHTML = '<div class="empty">✨ No tasks yet. Add your first task above!</div>';
+            return;
+        }
+
+        taskListElement.innerHTML = tasks.map(task => `
+                <div class="task-item">
+                    <div class="task-info">
+                        <input type="checkbox"
+                               class="task-checkbox"
+                               ${task.completed ? 'checked' : ''}
+                               onchange="updateTask(${task.id}, this.checked, '${escapeHtml(task.title)}', '${escapeHtml(task.description || '')}')">
+                        <div class="task-text">
+                            <div class="task-title ${task.completed ? 'completed' : ''}">
+                                ${escapeHtml(task.title)}
+                            </div>
+                            ${task.description ? `
+                                <div class="task-description ${task.completed ? 'completed' : ''}">
+                                    ${escapeHtml(task.description)}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+                </div>
+            `).join('');
+    }
+
+    // Helper function to prevent XSS attacks
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+</body>
+</html>
